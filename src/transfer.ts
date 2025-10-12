@@ -131,7 +131,11 @@ export async function transferNote(
 
 		if (fs.existsSync(outputPath)) {
 			if (settings.overwrite) {
-				fs.unlinkSync(outputPath);
+				try {
+					fs.unlinkSync(outputPath);
+				} catch (e) {
+					console.warn(e);
+				}
 			} else {
 				showError("Error: File already exists");
 				return;
@@ -152,7 +156,12 @@ export async function transferNote(
 			else await app.vault.modify(file, link);
 		} else if (settings.deleteOriginal && !recursive) {
 			// Delete original file
-			await app.vault.trash(file, settings.moveToSystemTrash);
+			try {
+				await app.vault.trash(file, settings.moveToSystemTrash);
+			} catch (e) {
+				//ignore error
+				console.warn(e);
+			}
 		}
 	} catch (e) {
 		showError(e);
@@ -259,7 +268,12 @@ export async function transferFolder(
 		await transferNote(null, file, plugin, true, outputPath, metadataDate);
 		//delete folder after all files are transferred
 		if (settings.deleteOriginal && !settings.createLink) {
-			await app.vault.trash(folder, settings.moveToSystemTrash);
+			try {
+				await app.vault.trash(folder, settings.moveToSystemTrash);
+			} catch (e) {
+				//ignore error
+				console.warn(e);
+			}
 		}
 		statusBar.increment();
 		noticeMessage.push(file.path);
