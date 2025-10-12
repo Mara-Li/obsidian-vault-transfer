@@ -74,9 +74,6 @@
 				"useGetterReturn": "error",
 				"noWith": "error",
 				"noVar": "error"
-			},
-			"nursery": {
-				"noDuplicateJsonKeys": "error"
 			}
 		},
 		"includes": [
