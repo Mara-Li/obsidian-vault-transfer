@@ -1,15 +1,15 @@
-import { type Editor, type MarkdownView, type Menu, TFile, TFolder } from "obsidian";
+import * as fs from "fs";
 import type VaultTransferPlugin from "main";
+import { FolderSuggestModal } from "modals";
+import { type Editor, type MarkdownView, type Menu, TFile, TFolder } from "obsidian";
+import * as path from "path";
 import {
 	getMetadataDate,
 	insertLinkToOtherVault,
 	transferFolder,
 	transferNote,
 } from "transfer";
-import { FolderSuggestModal } from "modals";
-import * as fs from "fs";
-import * as path from "path";
-import { showNotice } from "utils";
+import { showError, showNotice } from "utils";
 
 export interface Folder {
 	absPath: string;
@@ -24,13 +24,13 @@ export function addCommands(plugin: VaultTransferPlugin) {
 	plugin.addCommand({
 		id: "transfer-note-to-vault",
 		name: "Transfer current note to other vault",
-		editorCallback: (editor: Editor, view: MarkdownView) => {
+		editorCallback: async (editor: Editor, view: MarkdownView) => {
 			if (view.file == null) {
-				showNotice("Error: view.file is null");
+				showError("Error: view.file is null");
 				return;
 			}
 			const metadataDate = getMetadataDate(view.file, plugin.app, plugin.settings);
-			transferNote(editor, view.file, plugin, undefined, undefined, metadataDate);
+			await transferNote(editor, view.file, plugin, undefined, undefined, metadataDate);
 		},
 	});
 
@@ -64,10 +64,17 @@ export function addMenuCommands(plugin: VaultTransferPlugin) {
 						.setIcon("arrow-right-circle")
 						.onClick(async () => {
 							if (file instanceof TFolder) {
-								transferFolder(file, plugin);
+								await transferFolder(file, plugin);
 							} else if (file instanceof TFile) {
 								const metadataDate = getMetadataDate(file, plugin.app, plugin.settings);
-								transferNote(null, file, plugin, undefined, undefined, metadataDate);
+								await transferNote(
+									null,
+									file,
+									plugin,
+									undefined,
+									undefined,
+									metadataDate
+								);
 							}
 						});
 					submenu.addItem((subitem) => {

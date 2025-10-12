@@ -1,8 +1,20 @@
-import { Notice, setIcon } from "obsidian";
+import { Notice, sanitizeHTMLToDom, setIcon } from "obsidian";
 
 export function showNotice(...message: unknown[]) {
 	new Notice(message.join(" "));
 	console.log(message);
+}
+
+export function showError(error: Error | string) {
+	console.error(error);
+	if (typeof error === "string")
+		new Notice(
+			sanitizeHTMLToDom(`<span style="color:var(--text-error)">${error}</span>`)
+		);
+	else {
+		const msg = error.message ? error.message : String(error);
+		new Notice(sanitizeHTMLToDom(`<span style="color:var(--text-error)">${msg}</span>`));
+	}
 }
 
 export class TransferStatusBar {

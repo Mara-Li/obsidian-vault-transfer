@@ -83,7 +83,8 @@ export class SettingTab extends PluginSettingTab {
 					.setPlaceholder("Unsorted/Transfer")
 					.setValue(this.plugin.settings.outputFolder)
 					.onChange(async (value) => {
-						this.plugin.settings.outputFolder = normalizePath(value);
+						if (value.length > 0)
+							this.plugin.settings.outputFolder = normalizePath(value);
 						await this.plugin.saveSettings();
 						this.display();
 					})
@@ -196,6 +197,7 @@ export class SettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.deleteOriginal).onChange(async (value) => {
 					this.plugin.settings.deleteOriginal = value;
+					if (value) this.plugin.settings.createLink = false;
 					await this.plugin.saveSettings();
 					this.display();
 				})
