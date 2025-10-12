@@ -18,9 +18,15 @@ export class TransferStatusBar {
 		this.isAttachment = isAttachment;
 		this.counter = 0;
 		this.total = total;
-		this.icon = this.statusBarItem.createSpan({cls: ["vault-transfer-icon"]});
+		this.icon = this.statusBarItem.createSpan({ cls: ["vault-transfer-icon"] });
 		setIcon(this.icon, "search-check");
-		this.status = this.isAttachment ? this.statusBarItem.createSpan({text: `Number of attachments found to transfer: ${this.total}`}) : this.statusBarItem.createSpan({text: `Number of files to transfer: ${this.total}`});
+		this.status = this.isAttachment
+			? this.statusBarItem.createSpan({
+					text: `Number of attachments found to transfer: ${this.total}`,
+				})
+			: this.statusBarItem.createSpan({
+					text: `Number of files to transfer: ${this.total}`,
+				});
 		this.statusBarItem.addClass("loading");
 	}
 
@@ -29,14 +35,16 @@ export class TransferStatusBar {
 		setIcon(this.icon, "hourglass");
 		this.status.setText(`Transfering: ${this.counter}/${this.total}`);
 		this.statusBarItem.removeClass("starting");
-		this.statusBarItem.addClass("running");	
+		this.statusBarItem.addClass("running");
 	}
 
 	finish() {
 		this.statusBarItem.removeClass("running");
 		this.statusBarItem.addClass("finished");
 		setIcon(this.icon, "check");
-		this.status.setText(`Finished transfering ${this.counter} ${this.isAttachment ? "attachments" : "files"}.`);
+		this.status.setText(
+			`Finished transfering ${this.counter} ${this.isAttachment ? "attachments" : "files"}.`
+		);
 		this.remove();
 	}
 

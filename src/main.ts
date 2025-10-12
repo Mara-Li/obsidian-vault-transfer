@@ -7,7 +7,7 @@ export default class VaultTransferPlugin extends Plugin {
 	statusBarItem: HTMLElement | null = null;
 
 	async onload() {
-		console.log('loading vault-transfer plugin');
+		console.log("loading vault-transfer plugin");
 		await this.loadSettings();
 
 		addCommands(this);
@@ -25,6 +25,6 @@ export default class VaultTransferPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		console.log('unloading vault-transfer plugin');
+		console.log("unloading vault-transfer plugin");
 	}
 }
