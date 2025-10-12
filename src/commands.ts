@@ -9,7 +9,7 @@ import {
 	transferFolder,
 	transferNote,
 } from "transfer";
-import { showError, showNotice } from "utils";
+import { showError } from "utils";
 
 export interface Folder {
 	absPath: string;
