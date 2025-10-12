@@ -5,13 +5,14 @@ import {
 	FileSystemAdapter,
 	type MarkdownView,
 	moment,
-	normalizePath,
 	Notice,
+	normalizePath,
 	TFile,
 	type TFolder,
 } from "obsidian";
+import * as path from "path";
 import type { VaultTransferSettings } from "settings";
-import { showNotice, TransferStatusBar } from "utils";
+import { showError, showNotice, TransferStatusBar } from "utils";
 import type VaultTransferPlugin from "./main";
 
 /**
@@ -83,7 +84,7 @@ export async function transferNote(
 		// Get paths
 		const fileSystemAdapter = app.vault.adapter;
 		if (!(fileSystemAdapter instanceof FileSystemAdapter)) {
-			showNotice("Error: fileSystemAdapter is not an instance of FileSystemAdapter");
+			showError("Error: fileSystemAdapter is not an instance of FileSystemAdapter");
 			return;
 		}
 
@@ -100,8 +101,16 @@ export async function transferNote(
 				outputPath = overrideOutputPath(outputPath, settings, dataMetadata);
 			}
 		} else {
+			// When outputPath is provided (by transferFolder), we still need to apply recreateTree logic
 			outputFolderPath = normalizePath(outputPath);
-			outputPath = normalizePath(`${outputPath}/${fileName}`);
+			if (settings.recreateTree) {
+				// Recreate the tree structure based on the file path
+				outputPath = normalizePath(`${outputPath}/${file.path}`);
+				outputPath = removePartOfPath(settings, outputPath);
+				outputPath = overrideOutputPath(outputPath, settings, dataMetadata);
+			} else {
+				outputPath = normalizePath(`${outputPath}/${fileName}`);
+			}
 		}
 		if (!recursive) showNotice(`Copying ${file.path} to ${outputPath}`);
 
@@ -111,18 +120,20 @@ export async function transferNote(
 			// create folder if it doesn't exist
 			fs.mkdirSync(normalizePath(outputFolderPath), { recursive: true });
 		} else if (!folderExists) {
-			showNotice(`Error: Directory does not exist at ${outputFolderPath}`);
+			showError(`Error: Directory does not exist at ${outputFolderPath}`);
 			return;
-		} else if (settings.recreateTree) {
-			// create folder if it doesn't exist
-			fs.mkdirSync(normalizePath(outputPath.replace(fileName, "")), { recursive: true });
 		}
+
+		// Always ensure the immediate parent directory of the output file exists
+		let outputFileDir = path.dirname(outputPath);
+		outputFileDir = normalizePath(outputFileDir);
+		if (!fs.existsSync(outputFileDir)) fs.mkdirSync(outputFileDir, { recursive: true });
 
 		if (fs.existsSync(outputPath)) {
 			if (settings.overwrite) {
 				fs.unlinkSync(outputPath);
 			} else {
-				showNotice("Error: File already exists");
+				showError("Error: File already exists");
 				return;
 			}
 		}
@@ -130,7 +141,9 @@ export async function transferNote(
 		//get list of all attachments
 		copyAllAttachments(file, plugin, outputPath, thisVaultPath);
 		// Copy to new file in other vault
-		fs.copyFileSync(normalizePath(`${thisVaultPath}/${file.path}`), outputPath);
+		// Ensure the output path uses the correct separator for the OS
+		const finalOutputPath = normalizePath(outputPath);
+		fs.copyFileSync(normalizePath(`${thisVaultPath}/${file.path}`), finalOutputPath);
 
 		if (settings.createLink) {
 			// Replace original file with link
@@ -142,7 +155,7 @@ export async function transferNote(
 			await app.vault.trash(file, settings.moveToSystemTrash);
 		}
 	} catch (e) {
-		showNotice("Error copying file", e);
+		showError(e);
 	}
 }
 
@@ -154,21 +167,23 @@ export async function transferNote(
  */
 function listToTransfer(folder: TFolder, app: App): TFile[] {
 	const files = folder.children;
-	const filesToTransfer: TFile[] = [];
+	const filesToTransfer: Set<TFile> = new Set();
 	//recursive function to get all files in folder
 	for (const file of files) {
 		if (file instanceof TFile) {
-			filesToTransfer.push(file as TFile);
+			filesToTransfer.add(file as TFile);
 		} else {
-			filesToTransfer.push(...listToTransfer(file as TFolder, app));
+			//merge the set with the result of the recursive call
+			const subFiles = listToTransfer(file as TFolder, app);
+			subFiles.forEach((f) => filesToTransfer.add(f));
 		}
 	}
 	const folderParentNote = getFolderNote(folder, app);
 	if (folderParentNote)
 		//verify if not already in the list
-		filesToTransfer.push(folderParentNote);
+		filesToTransfer.add(folderParentNote);
 
-	return filesToTransfer;
+	return new Array(...filesToTransfer);
 }
 
 export function getFolderNote(folder: TFolder, app: App) {
@@ -271,7 +286,7 @@ export function insertLinkToOtherVault(
 	}
 
 	if (view.file == null) {
-		showNotice("Error: view.file is null");
+		showError("Error: view.file is null");
 		return;
 	}
 
@@ -312,7 +327,7 @@ function showErrorIfSettingsInvalid(settings: VaultTransferSettings): boolean {
 
 	// Show notice, if necessary
 	if (message != null) {
-		showNotice(`Error: ${message}`);
+		showError(message);
 		return true;
 	}
 
